@@ -44,6 +44,9 @@
       data-action="click->board#openDrawer"
     >
       <span class="tile-code">{{ pond.code }}</span>
+      {% if card.voucher_count %}
+      <span class="tile-voucher-badge" title="最近批次投放凭条数">凭 {{ card.voucher_count }}</span>
+      {% endif %}
       <span class="tile-status">{{ status_labels.get(pond.status, pond.status) }}</span>
       <span class="tile-meta">
         {% if batch and batch.peak_temp_c is not none %}
@@ -94,8 +97,22 @@
           <div><dt>开始</dt><dd>{{ selected_batch.started_at.strftime('%Y-%m-%d %H:%M') if selected_batch.started_at else '—' }}</dd></div>
           <div><dt>目标</dt><dd>{{ '%.1f'|format(selected_batch.target_temp_c) }} ℃</dd></div>
           <div><dt>峰值</dt><dd>{% if selected_batch.peak_temp_c is not none %}{{ '%.1f'|format(selected_batch.peak_temp_c) }} ℃{% else %}未记录{% endif %}</dd></div>
+          <div><dt>投放凭</dt><dd>{{ selected_vouchers|length }} 条 {% if selected_chain_ok %}<span class="chain-state ok">已齐</span>{% else %}<span class="chain-state bad">未齐</span>{% endif %}</dd></div>
           <div><dt>备注</dt><dd>{{ selected_batch.notes or '—' }}</dd></div>
         </dl>
+        {% if selected_vouchers %}
+        <ul class="voucher-mini">
+          {% for v in selected_vouchers %}
+          <li>#{{ v.voucher_no }} {{ v.reagent_name }} · {{ '%.1f'|format(v.amount_kg) }}kg · {{ v.dispensed_at.strftime('%m-%d %H:%M') }} · {{ v.dispensed_by }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% if not selected_chain_ok %}
+        <p class="chain-msg bad">{{ selected_chain_msg }}</p>
+        {% endif %}
+        <p class="hint">
+          <a href="{{ url_for('vouchers.index', batch_id=selected_batch.id) }}">前往投放凭页登记/查看凭链 →</a>
+        </p>
         {% else %}
         <p class="hint">尚无批次，无法出灰。</p>
         {% endif %}
@@ -114,9 +131,13 @@
             type="number"
             step="0.1"
             value="{{ selected_batch.peak_temp_c if selected_batch.peak_temp_c is not none else '' }}"
-            placeholder="例如 72"
+            placeholder="{% if selected_chain_ok %}例如 72{% else %}投放凭未齐，禁止写入{% endif %}"
+            {% if not selected_chain_ok %}disabled aria-disabled="true"{% endif %}
           />
         </label>
+        {% if not selected_chain_ok %}
+        <p class="chain-msg bad">投放凭未齐（至少 1 条、凭号连续、最近投放晚于开班），峰值温度禁止写入；请先到投放凭页补登。</p>
+        {% endif %}
         <label>批次备注
           <textarea name="batch_notes" rows="2">{{ selected_batch.notes }}</textarea>
         </label>
@@ -127,7 +148,7 @@
             {% endfor %}
           </select>
         </label>
-        <p class="hint" data-form-hint-target="hint">出灰前须最近批次峰值已记且 ≥ 60℃。</p>
+        <p class="hint" data-form-hint-target="hint">峰值须投放凭已齐方可登记；出灰前须峰值已记且 ≥ 60℃。</p>
         <button type="submit">保存作业记录</button>
       </form>
       {% endif %}

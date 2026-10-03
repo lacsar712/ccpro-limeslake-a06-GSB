@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}投放凭{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>熟化剂投放凭</h1>
+    <p>按批次下拉查看凭链；仅熟化中批次可新增投放凭，已出灰批次禁止再写。</p>
+  </div>
+</header>
+
+<form class="panel" method="get" style="max-width: none;">
+  <label>选择熟化批次
+    <select name="batch_id" onchange="this.form.submit()">
+      <option value="">— 请选择批次 —</option>
+      {% for b in batches %}
+      <option value="{{ b.id }}" {% if selected and selected.id == b.id %}selected{% endif %}>
+        {{ b.pond.code }} · {{ b.pond.plant.name }} · {{ status_labels.get(b.pond.status, b.pond.status) }} · 开班 {{ b.started_at.strftime('%m-%d %H:%M') }}
+      </option>
+      {% endfor %}
+    </select>
+  </label>
+  <noscript><button type="submit">查看凭链</button></noscript>
+</form>
+
+{% if selected %}
+<section class="panel voucher-panel">
+  <div class="voucher-head">
+    <div>
+      <h2>{{ selected.pond.code }} 批次凭链</h2>
+      <p class="hint">
+        开班 {{ selected.started_at.strftime('%Y-%m-%d %H:%M') }} ·
+        池状态 <span class="badge badge-{{ selected.pond.status }}">{{ status_labels.get(selected.pond.status, selected.pond.status) }}</span>
+        · 峰值 {% if selected.peak_temp_c is not none %}{{ '%.1f'|format(selected.peak_temp_c) }}℃{% else %}未记录{% endif %}
+      </p>
+    </div>
+    {% if chain_ok %}
+    <span class="chain-state ok">投放凭已齐</span>
+    {% else %}
+    <span class="chain-state bad">投放凭未齐</span>
+    {% endif %}
+  </div>
+
+  {% if not chain_ok %}
+  <p class="chain-msg bad">{{ chain_msg }}</p>
+  {% endif %}
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>凭号</th>
+        <th>药剂名</th>
+        <th>投放公斤</th>
+        <th>投放时刻</th>
+        <th>投放人</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in selected_vouchers %}
+      <tr>
+        <td>#{{ v.voucher_no }}</td>
+        <td>{{ v.reagent_name }}</td>
+        <td>{{ '%.1f'|format(v.amount_kg) }} kg</td>
+        <td>{{ v.dispensed_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ v.dispensed_by }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="empty-chain">该批次暂无投放凭，峰值温度将被拒绝写入。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if can_write %}
+  <form
+    class="voucher-form"
+    method="post"
+    action="{{ url_for('vouchers.add_voucher', batch_id=selected.id) }}"
+  >
+    <h3>新增投放凭</h3>
+    <div class="voucher-grid">
+      <label>凭号
+        <input name="voucher_no" type="number" min="1" step="1" value="{{ next_no }}" required />
+      </label>
+      <label>药剂名
+        <input name="reagent_name" type="text" placeholder="例如 熟化增效剂" required />
+      </label>
+      <label>投放公斤
+        <input name="amount_kg" type="number" min="0.1" step="0.1" placeholder="正数" required />
+      </label>
+      <label>投放时刻
+        <input name="dispensed_at" type="datetime-local" />
+      </label>
+      <label>投放人
+        <input name="dispensed_by" type="text" value="{{ current_user.username if current_user.is_authenticated else '' }}" required />
+      </label>
+    </div>
+    <p class="hint">同批次凭号不得重复；两名操作工同交一凭号时，先提交者生效，后提交者被拒。</p>
+    <div class="actions">
+      <button type="submit">登记投放凭</button>
+      <a class="btn ghost" href="{{ url_for('board.floor_plan', plant_id=selected.pond.plant_id, pond=selected.pond_id) }}">回到平面图</a>
+    </div>
+  </form>
+  {% else %}
+  <p class="chain-msg bad">该池非熟化中状态，禁止再写投放凭。</p>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

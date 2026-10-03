@@ -31,11 +31,13 @@ def create_app() -> Flask:
     from app.blueprints.board import bp as board_bp
     from app.blueprints.batches import bp as batches_bp
     from app.blueprints.ponds import bp as ponds_bp
+    from app.blueprints.vouchers import bp as vouchers_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(board_bp)
     app.register_blueprint(ponds_bp)
     app.register_blueprint(batches_bp)
+    app.register_blueprint(vouchers_bp)
 
     @app.route("/")
     def index():
@@ -52,7 +54,14 @@ def create_app() -> Flask:
 def seed_demo_data() -> None:
     from datetime import timedelta
 
-    from app.models import Plant, Pond, SlakeBatch, User, utcnow
+    from app.models import (
+        Plant,
+        Pond,
+        ReagentVoucher,
+        SlakeBatch,
+        User,
+        utcnow,
+    )
 
     if not User.query.filter_by(username="admin").first():
         admin = User(username="admin", role="admin")
@@ -90,49 +99,86 @@ def seed_demo_data() -> None:
     db.session.flush()
 
     now = utcnow()
+
+    b1 = SlakeBatch(
+        pond=p1,
+        started_at=now - timedelta(hours=6),
+        target_temp_c=85.0,
+        peak_temp_c=72.0,
+        notes="峰值已过，凭已齐，可出灰",
+    )
+    b2 = SlakeBatch(
+        pond=p2,
+        started_at=now - timedelta(hours=2),
+        target_temp_c=80.0,
+        peak_temp_c=None,
+        notes="注水中，尚未测得峰值",
+    )
+    b3 = SlakeBatch(
+        pond=p3,
+        started_at=now - timedelta(days=1),
+        target_temp_c=82.0,
+        peak_temp_c=91.0,
+        notes="已出灰批次",
+    )
+    # 唯一的「熟化中但零投放凭」批次：峰值写入与改写都应被拒绝。
+    b4 = SlakeBatch(
+        pond=p4,
+        started_at=now - timedelta(hours=9),
+        target_temp_c=84.0,
+        peak_temp_c=None,
+        notes="熟化中段，尚未投放熟化剂",
+    )
+    b5 = SlakeBatch(
+        pond=p5,
+        started_at=now - timedelta(hours=1),
+        target_temp_c=80.0,
+        peak_temp_c=None,
+        notes="刚开池注水",
+    )
+    b6 = SlakeBatch(
+        pond=p6,
+        started_at=now - timedelta(days=2),
+        target_temp_c=83.0,
+        peak_temp_c=88.0,
+        notes="东侧池已出灰",
+    )
+    db.session.add_all([b1, b2, b3, b4, b5, b6])
+    db.session.flush()
+
     db.session.add_all(
         [
-            SlakeBatch(
-                pond=p1,
-                started_at=now - timedelta(hours=6),
-                target_temp_c=85.0,
-                peak_temp_c=72.0,
-                notes="峰值已过，可出灰",
+            ReagentVoucher(
+                batch=b1,
+                voucher_no=1,
+                reagent_name="熟化增效剂",
+                amount_kg=12.5,
+                dispensed_at=now - timedelta(hours=4),
+                dispensed_by="王建国",
             ),
-            SlakeBatch(
-                pond=p2,
-                started_at=now - timedelta(hours=2),
-                target_temp_c=80.0,
-                peak_temp_c=None,
-                notes="注水中，尚未测得峰值",
+            ReagentVoucher(
+                batch=b1,
+                voucher_no=2,
+                reagent_name="促凝剂",
+                amount_kg=8.0,
+                dispensed_at=now - timedelta(hours=2),
+                dispensed_by="李春梅",
             ),
-            SlakeBatch(
-                pond=p3,
-                started_at=now - timedelta(days=1),
-                target_temp_c=82.0,
-                peak_temp_c=91.0,
-                notes="已出灰批次",
+            ReagentVoucher(
+                batch=b3,
+                voucher_no=1,
+                reagent_name="熟化增效剂",
+                amount_kg=15.0,
+                dispensed_at=now - timedelta(hours=20),
+                dispensed_by="王建国",
             ),
-            SlakeBatch(
-                pond=p4,
-                started_at=now - timedelta(hours=9),
-                target_temp_c=84.0,
-                peak_temp_c=66.0,
-                notes="熟化中段",
-            ),
-            SlakeBatch(
-                pond=p5,
-                started_at=now - timedelta(hours=1),
-                target_temp_c=80.0,
-                peak_temp_c=None,
-                notes="刚开池注水",
-            ),
-            SlakeBatch(
-                pond=p6,
-                started_at=now - timedelta(days=2),
-                target_temp_c=83.0,
-                peak_temp_c=88.0,
-                notes="东侧池已出灰",
+            ReagentVoucher(
+                batch=b6,
+                voucher_no=1,
+                reagent_name="促凝剂",
+                amount_kg=10.0,
+                dispensed_at=now - timedelta(hours=36),
+                dispensed_by="赵大勇",
             ),
         ]
     )
