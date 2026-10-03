@@ -75,3 +75,31 @@ class SlakeBatch(db.Model):
     notes = db.Column(db.Text, nullable=False, default="")
 
     pond = db.relationship("Pond", back_populates="batches")
+    vouchers = db.relationship(
+        "DosingVoucher",
+        back_populates="batch",
+        cascade="all, delete-orphan",
+        order_by="DosingVoucher.voucher_no",
+    )
+
+
+class DosingVoucher(db.Model):
+    """熟化剂投放凭：熟化中批次写峰值前必须有齐全的凭链。"""
+
+    __tablename__ = "dosing_vouchers"
+    __table_args__ = (
+        db.UniqueConstraint("batch_id", "voucher_no", name="uq_voucher_no_per_batch"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(
+        db.Integer, db.ForeignKey("slake_batches.id"), nullable=False
+    )
+    voucher_no = db.Column(db.Integer, nullable=False)
+    reagent_name = db.Column(db.String(120), nullable=False)
+    dose_kg = db.Column(db.Float, nullable=False)
+    dosed_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    operator = db.Column(db.String(64), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow)
+
+    batch = db.relationship("SlakeBatch", back_populates="vouchers")

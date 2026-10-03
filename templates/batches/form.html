@@ -24,6 +24,7 @@
   <label>峰值温度 ℃（可空）
     <input name="peak_temp_c" type="number" step="0.1" value="{{ batch.peak_temp_c if batch and batch.peak_temp_c is not none else '' }}" />
   </label>
+  <p class="hint">熟化中批次写峰值前，投放凭须至少 1 条、凭号自 1 起连续、最近投放晚于开班，否则拒绝。</p>
   <label>备注
     <textarea name="notes" rows="3">{{ batch.notes if batch else '' }}</textarea>
   </label>

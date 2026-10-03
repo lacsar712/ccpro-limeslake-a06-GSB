@@ -210,6 +210,103 @@ body {
 .tile-status { font-weight: 700; font-size: 0.95rem; }
 .tile-meta, .tile-cap { font-size: 0.85rem; opacity: 0.9; }
 
+.pond-tile { position: relative; }
+
+.tile-voucher-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 30px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--slate-deep);
+  color: #ecfccb;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.hint.warn { color: #b45309; font-weight: 600; }
+
+.btn-sm { padding: 7px 12px; font-size: 0.85rem; border-radius: 7px; }
+
+/* Voucher chain in drawer */
+.voucher-chain-card { display: grid; gap: 10px; }
+
+.voucher-chain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 190px;
+  overflow: auto;
+}
+
+.voucher-chain-list li {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 2px 8px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.84rem;
+}
+
+.vc-no { font-weight: 800; color: var(--lime-mid); grid-row: 1 / 3; align-self: center; }
+.vc-name { font-weight: 700; }
+.vc-kg { font-weight: 700; color: var(--slate); }
+.vc-at { color: var(--muted); }
+.vc-op { color: var(--muted); }
+
+.voucher-mini-form {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.mini-grid { display: grid; gap: 8px; }
+.mini-grid input { padding: 8px 10px; }
+
+/* Voucher dedicated page */
+.panel-inline {
+  display: inline-flex;
+  align-items: end;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 16px;
+  max-width: none;
+}
+
+.voucher-layout {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .voucher-layout { grid-template-columns: 1fr; }
+}
+
+.panel-title {
+  margin: 0 0 6px;
+  font-size: 1.02rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voucher-form { gap: 12px; }
+
+.empty-chain { text-align: center; color: var(--muted); }
+
 .empty-board {
   grid-column: 1 / -1;
   color: var(--muted);

@@ -4,7 +4,7 @@
 <header class="page-head">
   <div>
     <h1>{% if pond %}编辑熟化池{% else %}新建熟化池{% endif %}</h1>
-    <p>将状态设为「已出灰」时，系统会校验最近批次峰值温度 ≥ 60℃。</p>
+    <p>将状态设为「已出灰」时，系统会校验投放凭链齐全且最近批次峰值温度 ≥ 60℃。</p>
   </div>
 </header>
 <form class="panel" method="post" data-controller="form-hint">
@@ -31,7 +31,7 @@
   <label>备注
     <textarea name="notes" rows="3">{{ pond.notes if pond else '' }}</textarea>
   </label>
-  <p class="hint" data-form-hint-target="hint">出灰前请确认最近熟化批次已记录峰值温度且不低于 60℃。</p>
+  <p class="hint" data-form-hint-target="hint">出灰前投放凭须齐全，且最近熟化批次峰值已记录并不低于 60℃。</p>
   <div class="actions">
     <button type="submit">保存</button>
     <a class="btn ghost" href="{{ url_for('board.floor_plan') }}">返回平面图</a>

@@ -24,10 +24,10 @@ class FormHintController extends Controller {
     if (!this.hasHintTarget || !this.hasStatusTarget) return
     if (this.statusTarget.value === "drawn") {
       this.hintTarget.textContent =
-        "当前选择「已出灰」：须存在最近批次，且峰值温度已记录并 ≥ 60℃。"
+        "当前选择「已出灰」：投放凭链须齐全，且最近批次峰值已记录并 ≥ 60℃。"
     } else {
       this.hintTarget.textContent =
-        "出灰前请确认最近熟化批次已记录峰值温度且不低于 60℃。"
+        "熟化中批次写峰值前，投放凭须至少 1 条、凭号连续且最近投放晚于开班；出灰另须峰值 ≥ 60℃。"
     }
   }
 }

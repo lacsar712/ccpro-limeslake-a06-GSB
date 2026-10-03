@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}熟化剂投放凭{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>熟化剂投放凭</h1>
+    <p>按批次查看凭链；仅熟化中批次可登记投放凭，凭号自 1 起连续、公斤为正。</p>
+  </div>
+</header>
+
+{% if batches %}
+<form method="get" class="voucher-picker panel-inline">
+  <label>熟化批次
+    <select name="batch_id" onchange="this.form.submit()">
+      {% for b in batches %}
+      <option value="{{ b.id }}" {% if selected and selected.id == b.id %}selected{% endif %}>
+        {{ b.pond.code }} · #{{ b.id }} · {{ status_labels.get(b.pond.status, b.pond.status) }} · {{ b.started_at.strftime('%m-%d %H:%M') }}
+      </option>
+      {% endfor %}
+    </select>
+  </label>
+  <noscript><button type="submit">查看</button></noscript>
+</form>
+
+{% if selected %}
+<section class="voucher-layout">
+  <div class="panel voucher-chain">
+    <h2 class="panel-title">
+      {{ selected.pond.code }} 批次 #{{ selected.id }} 的投放凭
+      <span class="badge badge-{{ selected.pond.status }}">{{ status_labels.get(selected.pond.status, selected.pond.status) }}</span>
+    </h2>
+    <p class="hint">开班 {{ selected.started_at.strftime('%Y-%m-%d %H:%M') }} · 共 {{ vouchers|length }} 条</p>
+    <table class="data-table">
+      <thead>
+        <tr><th>凭号</th><th>药剂名</th><th>投放公斤</th><th>投放时刻</th><th>投放人</th></tr>
+      </thead>
+      <tbody>
+        {% for v in vouchers %}
+        <tr>
+          <td>{{ v.voucher_no }}</td>
+          <td>{{ v.reagent_name }}</td>
+          <td>{{ '%.1f'|format(v.dose_kg) }}</td>
+          <td>{{ v.dosed_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>{{ v.operator }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="empty-chain">本批次暂无投放凭</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if selected.pond.status != 'slaking' %}
+    <p class="hint warn">该批次非熟化中，禁止再写投放凭。</p>
+    {% endif %}
+  </div>
+
+  {% if selected.pond.status == 'slaking' %}
+  <form class="panel voucher-form" method="post" action="{{ url_for('vouchers.add_voucher') }}">
+    <h2 class="panel-title">登记投放凭</h2>
+    <input type="hidden" name="batch_id" value="{{ selected.id }}" />
+    <label>凭号
+      <input name="voucher_no" type="number" min="1" step="1" value="{{ suggested_no }}" required />
+    </label>
+    <label>药剂名
+      <input name="reagent_name" required placeholder="例如 生石灰粉" />
+    </label>
+    <label>投放公斤
+      <input name="dose_kg" type="number" min="0.1" step="0.1" required placeholder="正数" />
+    </label>
+    <label>投放时刻（留空取当前时刻）
+      <input name="dosed_at" type="datetime-local" />
+    </label>
+    <label>投放人
+      <input name="operator" placeholder="默认当前登录人" />
+    </label>
+    <p class="hint">同批次凭号不得重复；两人同交一号只落一笔。</p>
+    <div class="actions">
+      <button type="submit">登记</button>
+      <a class="btn ghost" href="{{ url_for('board.floor_plan', plant_id=selected.pond.plant_id, pond=selected.pond_id) }}">去平面图</a>
+    </div>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
+{% else %}
+<p class="empty-board">暂无熟化批次</p>
+{% endif %}
+{% endblock %}

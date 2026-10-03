@@ -55,6 +55,9 @@
         {% endif %}
       </span>
       <span class="tile-cap">{{ '%.0f'|format(pond.capacity_m3) }} m³</span>
+      {% if batch and batch.vouchers %}
+      <span class="tile-voucher-badge" title="熟化剂投放凭条数">凭 {{ batch.vouchers|length }}</span>
+      {% endif %}
     </a>
     {% else %}
     <p class="empty-board">当前厂区暂无熟化池</p>
@@ -94,12 +97,62 @@
           <div><dt>开始</dt><dd>{{ selected_batch.started_at.strftime('%Y-%m-%d %H:%M') if selected_batch.started_at else '—' }}</dd></div>
           <div><dt>目标</dt><dd>{{ '%.1f'|format(selected_batch.target_temp_c) }} ℃</dd></div>
           <div><dt>峰值</dt><dd>{% if selected_batch.peak_temp_c is not none %}{{ '%.1f'|format(selected_batch.peak_temp_c) }} ℃{% else %}未记录{% endif %}</dd></div>
+          <div><dt>投放凭</dt><dd>{{ selected_vouchers|length }} 条{% if not selected_vouchers %}（零投放凭）{% endif %}</dd></div>
           <div><dt>备注</dt><dd>{{ selected_batch.notes or '—' }}</dd></div>
         </dl>
         {% else %}
         <p class="hint">尚无批次，无法出灰。</p>
         {% endif %}
       </section>
+
+      {% if selected_batch %}
+      <section class="batch-card voucher-chain-card">
+        <h3>熟化剂投放凭链</h3>
+        {% if selected_vouchers %}
+        <ol class="voucher-chain-list">
+          {% for v in selected_vouchers %}
+          <li>
+            <span class="vc-no">#{{ v.voucher_no }}</span>
+            <span class="vc-name">{{ v.reagent_name }}</span>
+            <span class="vc-kg">{{ '%.1f'|format(v.dose_kg) }} kg</span>
+            <span class="vc-at">{{ v.dosed_at.strftime('%m-%d %H:%M') }}</span>
+            <span class="vc-op">{{ v.operator }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+        {% else %}
+        <p class="hint warn">本批次零投放凭，写峰值将被拒绝。</p>
+        {% endif %}
+        <a class="btn ghost btn-sm" href="{{ url_for('vouchers.list_vouchers', batch_id=selected_batch.id) }}">到投放凭专页</a>
+
+        {% if selected.status == 'slaking' %}
+        <form class="voucher-mini-form" method="post" action="{{ url_for('vouchers.add_voucher') }}">
+          <input type="hidden" name="batch_id" value="{{ selected_batch.id }}" />
+          <input type="hidden" name="next" value="{{ url_for('board.floor_plan', plant_id=selected.plant_id, pond=selected.id) }}" />
+          <div class="mini-grid">
+            <label>凭号
+              <input name="voucher_no" type="number" min="1" step="1" value="{{ selected_voucher_no }}" required />
+            </label>
+            <label>药剂名
+              <input name="reagent_name" required placeholder="生石灰粉" />
+            </label>
+            <label>公斤
+              <input name="dose_kg" type="number" min="0.1" step="0.1" required placeholder="正数" />
+            </label>
+            <label>投放时刻（留空取现在）
+              <input name="dosed_at" type="datetime-local" />
+            </label>
+            <label>投放人
+              <input name="operator" placeholder="默认本人" />
+            </label>
+          </div>
+          <button type="submit" class="btn-sm">登记投放凭</button>
+        </form>
+        {% else %}
+        <p class="hint">该池非熟化中，禁止再写投放凭。</p>
+        {% endif %}
+      </section>
+      {% endif %}
 
       {% if selected_batch %}
       <form
@@ -117,6 +170,9 @@
             placeholder="例如 72"
           />
         </label>
+        {% if selected.status == 'slaking' and not can_peak %}
+        <p class="hint warn">{{ peak_block_reason }}。请先在上方补齐投放凭。</p>
+        {% endif %}
         <label>批次备注
           <textarea name="batch_notes" rows="2">{{ selected_batch.notes }}</textarea>
         </label>
@@ -127,7 +183,7 @@
             {% endfor %}
           </select>
         </label>
-        <p class="hint" data-form-hint-target="hint">出灰前须最近批次峰值已记且 ≥ 60℃。</p>
+        <p class="hint" data-form-hint-target="hint">出灰前须投放凭齐全、最近批次峰值已记且 ≥ 60℃。</p>
         <button type="submit">保存作业记录</button>
       </form>
       {% endif %}

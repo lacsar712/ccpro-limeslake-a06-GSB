@@ -3,7 +3,15 @@ from flask_login import login_required
 
 from app.extensions import db
 from app.models import Plant, Pond
-from app.services.rules import RuleError, assert_can_set_pond_status, latest_batch_for_pond
+from app.services.rules import (
+    RuleError,
+    assert_can_set_pond_status,
+    assert_can_write_peak,
+    can_write_peak,
+    latest_batch_for_pond,
+    next_voucher_no,
+    vouchers_for_batch,
+)
 
 bp = Blueprint("board", __name__, url_prefix="/board")
 
@@ -41,10 +49,18 @@ def floor_plan():
     selected_id = request.args.get("pond", type=int)
     selected = None
     selected_batch = None
+    selected_vouchers = []
+    selected_voucher_no = 1
+    can_peak = False
+    peak_block_reason = ""
     if selected_id:
         selected = next((c["pond"] for c in pond_cards if c["pond"].id == selected_id), None)
         if selected:
             selected_batch = latest_batch_for_pond(selected)
+            if selected_batch:
+                selected_vouchers = vouchers_for_batch(selected_batch)
+                selected_voucher_no = next_voucher_no(selected_batch)
+                can_peak, peak_block_reason = can_write_peak(selected_batch)
 
     return render_template(
         "board/floor.html",
@@ -53,6 +69,10 @@ def floor_plan():
         pond_cards=pond_cards,
         selected=selected,
         selected_batch=selected_batch,
+        selected_vouchers=selected_vouchers,
+        selected_voucher_no=selected_voucher_no,
+        can_peak=can_peak,
+        peak_block_reason=peak_block_reason,
         status_labels=STATUS_LABELS,
     )
 
@@ -74,12 +94,22 @@ def pond_ops(pond_id: int):
 
     if peak_raw:
         try:
-            batch.peak_temp_c = float(peak_raw)
+            peak = float(peak_raw)
         except ValueError:
             flash("峰值温度格式无效", "error")
             return redirect(
                 url_for("board.floor_plan", plant_id=pond.plant_id, pond=pond.id)
             )
+        # 熟化中批次写入/改写峰值前，投放凭链须齐全。
+        try:
+            assert_can_write_peak(batch)
+        except RuleError as exc:
+            db.session.rollback()
+            flash(str(exc), "error")
+            return redirect(
+                url_for("board.floor_plan", plant_id=pond.plant_id, pond=pond.id)
+            )
+        batch.peak_temp_c = peak
 
     batch.notes = notes
 

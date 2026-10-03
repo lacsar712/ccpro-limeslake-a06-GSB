@@ -31,11 +31,13 @@ def create_app() -> Flask:
     from app.blueprints.board import bp as board_bp
     from app.blueprints.batches import bp as batches_bp
     from app.blueprints.ponds import bp as ponds_bp
+    from app.blueprints.vouchers import bp as vouchers_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(board_bp)
     app.register_blueprint(ponds_bp)
     app.register_blueprint(batches_bp)
+    app.register_blueprint(vouchers_bp)
 
     @app.route("/")
     def index():
@@ -52,7 +54,7 @@ def create_app() -> Flask:
 def seed_demo_data() -> None:
     from datetime import timedelta
 
-    from app.models import Plant, Pond, SlakeBatch, User, utcnow
+    from app.models import DosingVoucher, Plant, Pond, SlakeBatch, User, utcnow
 
     if not User.query.filter_by(username="admin").first():
         admin = User(username="admin", role="admin")
@@ -90,49 +92,72 @@ def seed_demo_data() -> None:
     db.session.flush()
 
     now = utcnow()
+    batches = [
+        SlakeBatch(
+            pond=p1,
+            started_at=now - timedelta(hours=6),
+            target_temp_c=85.0,
+            peak_temp_c=None,
+            notes="熟化中且零投放凭：写峰值须先补齐凭链",
+        ),
+        SlakeBatch(
+            pond=p2,
+            started_at=now - timedelta(hours=2),
+            target_temp_c=80.0,
+            peak_temp_c=None,
+            notes="注水中，尚未测得峰值",
+        ),
+        SlakeBatch(
+            pond=p3,
+            started_at=now - timedelta(days=1),
+            target_temp_c=82.0,
+            peak_temp_c=91.0,
+            notes="已出灰批次",
+        ),
+        SlakeBatch(
+            pond=p4,
+            started_at=now - timedelta(hours=9),
+            target_temp_c=84.0,
+            peak_temp_c=66.0,
+            notes="熟化中段，投放凭链齐全",
+        ),
+        SlakeBatch(
+            pond=p5,
+            started_at=now - timedelta(hours=1),
+            target_temp_c=80.0,
+            peak_temp_c=None,
+            notes="刚开池注水",
+        ),
+        SlakeBatch(
+            pond=p6,
+            started_at=now - timedelta(days=2),
+            target_temp_c=83.0,
+            peak_temp_c=88.0,
+            notes="东侧池已出灰",
+        ),
+    ]
+    db.session.add_all(batches)
+    db.session.flush()
+
+    # p4 熟化中班：凭号自 1 起连续、最近投放晚于开班，凭链齐全。
+    p4_batch = batches[3]
     db.session.add_all(
         [
-            SlakeBatch(
-                pond=p1,
-                started_at=now - timedelta(hours=6),
-                target_temp_c=85.0,
-                peak_temp_c=72.0,
-                notes="峰值已过，可出灰",
+            DosingVoucher(
+                batch=p4_batch,
+                voucher_no=1,
+                reagent_name="生石灰粉",
+                dose_kg=120.0,
+                dosed_at=now - timedelta(hours=7),
+                operator="worker",
             ),
-            SlakeBatch(
-                pond=p2,
-                started_at=now - timedelta(hours=2),
-                target_temp_c=80.0,
-                peak_temp_c=None,
-                notes="注水中，尚未测得峰值",
-            ),
-            SlakeBatch(
-                pond=p3,
-                started_at=now - timedelta(days=1),
-                target_temp_c=82.0,
-                peak_temp_c=91.0,
-                notes="已出灰批次",
-            ),
-            SlakeBatch(
-                pond=p4,
-                started_at=now - timedelta(hours=9),
-                target_temp_c=84.0,
-                peak_temp_c=66.0,
-                notes="熟化中段",
-            ),
-            SlakeBatch(
-                pond=p5,
-                started_at=now - timedelta(hours=1),
-                target_temp_c=80.0,
-                peak_temp_c=None,
-                notes="刚开池注水",
-            ),
-            SlakeBatch(
-                pond=p6,
-                started_at=now - timedelta(days=2),
-                target_temp_c=83.0,
-                peak_temp_c=88.0,
-                notes="东侧池已出灰",
+            DosingVoucher(
+                batch=p4_batch,
+                voucher_no=2,
+                reagent_name="助溶剂",
+                dose_kg=35.5,
+                dosed_at=now - timedelta(hours=4),
+                operator="admin",
             ),
         ]
     )
